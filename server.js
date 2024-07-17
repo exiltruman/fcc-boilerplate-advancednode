@@ -33,9 +33,18 @@ myDB(async client => {
     // Change the response to render the Pug template
     res.render('index', {
       title: 'Connected to Database',
-      message: 'Please login'
+      message: 'Please login',
+      showLogin: true
     });
   });
+
+  app.post('/login', passport.authenticate('local', { failureRedirect: '/'}), (req, res) => {
+    res.redirect('/profile');
+  })
+
+  app.get('/profile',ensureAuthenticated, (req, res) => {
+    res.render('profile')
+  })
 
   // Serialization and deserialization here...
   passport.serializeUser((user, done) => {
@@ -57,6 +66,13 @@ myDB(async client => {
       return done(null, user);
     });
   }));
+
+  function ensureAuthenticated(req, res, next) {
+    if (req.isAuthenticated()) {
+      return next();
+    }
+    res.redirect('/');
+  };
 
   // Be sure to add this...
 }).catch(e => {

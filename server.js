@@ -7,6 +7,7 @@ const session = require('express-session');
 const passport = require('passport');
 const { ObjectID } = require('mongodb');
 const LocalStrategy = require('passport-local');
+const bcrypt = require('bcrypt')
 
 const app = express();
 
@@ -25,6 +26,28 @@ app.set('views', './views/pug');
 passport.initialize()
 passport.session()
 
+passport.serializeUser((user, done) => {
+  done(null, user._id);
+});
+
+passport.deserializeUser((id, done) => {
+  myDataBase.findOne({ _id: new ObjectID(id) }, (err, doc) => {
+    done(null, doc);
+  });
+});
+
+passport.use(new LocalStrategy((username, password, done) => {
+  myDataBase.findOne({ username: username }, (err, user) => {
+    console.log(`User ${username} attempted to log in.`);
+    if (err) return done(err);
+    if (!user) return done(null, false);
+    if (!bcrypt.compareSync(password, user.password)) { 
+      return done(null, false);
+    }
+    return done(null, user);
+  });
+}));
+
 myDB(async client => {
   const myDataBase = await client.db('database').collection('users');
 
@@ -34,7 +57,8 @@ myDB(async client => {
     res.render('index', {
       title: 'Connected to Database',
       message: 'Please login',
-      showLogin: true
+      showLogin: true,
+      showRegistration: true
     });
   });
 
@@ -42,7 +66,7 @@ myDB(async client => {
     res.redirect('/profile');
   })
 
-  app.get('/profile',ensureAuthenticated, (req, res) => {
+  app.get('/profile', ensureAuthenticated, (req, res) => {
     res.render('profile', {
       username: req.user.username
     })
@@ -54,6 +78,38 @@ myDB(async client => {
     res.redirect('/');
   }); 
 
+  app.route('/register')
+  .post((req, res, next) => {
+    myDataBase.findOne({ username: req.body.username }, (err, user) => {
+      if (err) {
+        next(err);
+      } else if (user) {
+        res.redirect('/');
+      } else {
+        const hash = bcrypt.hashSync(req.body.password, 12);
+        myDataBase.insertOne({
+          username: req.body.username,
+          password: hash
+        },
+          (err, doc) => {
+            if (err) {
+              res.redirect('/');
+            } else {
+              // The inserted document is held within
+              // the ops property of the doc
+              next(null, doc.ops[0]);
+            }
+          }
+        )
+      }
+    })
+  },
+    passport.authenticate('local', { failureRedirect: '/' }),
+    (req, res, next) => {
+      res.redirect('/profile');
+    }
+  );
+
   app.use((req, res, next) => {
     res.status(404)
       .type('text')
@@ -61,25 +117,7 @@ myDB(async client => {
   });
 
   // Serialization and deserialization here...
-  passport.serializeUser((user, done) => {
-    done(null, user._id);
-  });
   
-  passport.deserializeUser((id, done) => {
-    myDataBase.findOne({ _id: new ObjectID(id) }, (err, doc) => {
-      done(null, doc);
-    });
-  });
-
-  passport.use(new LocalStrategy((username, password, done) => {
-    myDataBase.findOne({ username: username }, (err, user) => {
-      console.log(`User ${username} attempted to log in.`);
-      if (err) return done(err);
-      if (!user) return done(null, false);
-      if (password !== user.password) return done(null, false);
-      return done(null, user);
-    });
-  }));
 
   function ensureAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {

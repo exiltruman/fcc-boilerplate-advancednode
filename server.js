@@ -43,7 +43,9 @@ myDB(async client => {
   })
 
   app.get('/profile',ensureAuthenticated, (req, res) => {
-    res.render('profile')
+    res.render('profile', {
+      username: req.user.username
+    })
   })
 
   // Serialization and deserialization here...

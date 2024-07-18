@@ -4,11 +4,11 @@ const bcrypt = require('bcrypt')
 module.exports = function (app, myDataBase) {
     app.route('/').get((req, res) => {
         res.render('index', {
-        title: 'Connected to Database',
-        message: 'Please login',
-        showLogin: true,
-        showRegistration: true,
-        showSocialAuth: true
+            title: 'Connected to Database',
+            message: 'Please login',
+            showLogin: true,
+            showRegistration: true,
+            showSocialAuth: true
         });
     });
 
@@ -18,7 +18,7 @@ module.exports = function (app, myDataBase) {
 
     app.get('/profile', ensureAuthenticated, (req, res) => {
         res.render('profile', {
-        username: req.user.username
+            username: req.user.username
         })
     })
 
@@ -56,13 +56,11 @@ module.exports = function (app, myDataBase) {
     },
         passport.authenticate('local', { failureRedirect: '/' }),
         (req, res, next) => {
-        res.redirect('/profile');
+            res.redirect('/profile');
         }
     );
 
-    app.get('/auth/github', passport.authenticate('github'), (req, res) => {
-
-    })
+    app.get('/auth/github', passport.authenticate('github'));
 
     app.get('/auth/github/callback', passport.authenticate('github', { failureRedirect: '/' }), (req, res) => {
         res.redirect('/profile');

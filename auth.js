@@ -5,10 +5,7 @@ const bcrypt = require('bcrypt')
 const GitHubStrategy = require('passport-github').Strategy;
 require('dotenv').config();
 
-module.exports = function (app, myDataBase) {
-    passport.initialize()
-    passport.session()
-    
+module.exports = function (app, myDataBase) { 
     passport.serializeUser((user, done) => {
       done(null, user._id);
     });
@@ -36,9 +33,34 @@ module.exports = function (app, myDataBase) {
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
         callbackURL: 'https://3000-exiltruman-fccboilerpla-cmhxkox7p0x.ws-eu115.gitpod.io/auth/github/callback'
       },
-        function(accessToken, refreshToken, profile, cb) {
+        function(accessToken, refreshToken, profile, done) {
           console.log(profile);
-          //Database logic here with callback containing your user object
+          myDataBase.findOneAndUpdate(
+            { id: profile.id },
+            {
+              $setOnInsert: {
+                id: profile.id,
+                username: profile.username,
+                name: profile.displayName || 'John Doe',
+                photo: profile.photos[0].value || '',
+                email: Array.isArray(profile.emails)
+                  ? profile.emails[0].value
+                  : 'No public email',
+                created_on: new Date(),
+                provider: profile.provider || ''
+              },
+              $set: {
+                last_login: new Date()
+              },
+              $inc: {
+                login_count: 1
+              }
+            },
+            { upsert: true, new: true },
+            (err, doc) => {
+              return done(null, doc.value);
+            }
+          );
         }
       ));
 }

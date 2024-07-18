@@ -34,7 +34,6 @@ module.exports = function (app, myDataBase) {
         callbackURL: 'https://3000-exiltruman-fccboilerpla-cmhxkox7p0x.ws-eu115.gitpod.io/auth/github/callback'
       },
         function(accessToken, refreshToken, profile, done) {
-          console.log(profile);
           myDataBase.findOneAndUpdate(
             { id: profile.id },
             {
